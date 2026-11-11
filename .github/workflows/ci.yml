@@ -8,18 +8,20 @@ on:
 jobs:
   build-test:
     runs-on: ubuntu-latest
+    # 빌드 검사용 임시 값 (실제 Firebase 값은 저장소에 넣지 않는다)
+    env:
+      VITE_FIREBASE_API_KEY: ci-build-check
+      VITE_FIREBASE_AUTH_DOMAIN: ci-build-check.firebaseapp.com
+      VITE_FIREBASE_PROJECT_ID: ci-build-check
+      VITE_FIREBASE_APP_ID: ci-build-check
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
       - name: Install
         run: npm install
       - name: Test
         run: npm test
       - name: Build
         run: npm run build
-      - uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: dist

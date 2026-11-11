@@ -1,23 +1,20 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, connectAuthEmulator } from 'firebase/auth';
-import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
 
-const env = import.meta.env;
-
-const firebaseConfig = {
-  apiKey: env.VITE_FIREBASE_API_KEY,
-  authDomain: env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: env.VITE_FIREBASE_PROJECT_ID || 'demo-fitlog',
-  storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: env.VITE_FIREBASE_APP_ID,
+// Vite가 .env.local에서 읽은 웹 앱 설정값 4개 (7주차 실습 코드와 같은 구성)
+const config = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+// 값이 비었거나 YOUR_ 예시값이 남아 있으면 연결하지 않고 안내 화면을 보여 준다.
+export const setupError = Object.values(config).some(
+  (value) => !value || value.includes('YOUR_'),
+);
 
-if (env.VITE_USE_EMULATOR === 'true') {
-  connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
-  connectFirestoreEmulator(db, '127.0.0.1', 8080);
-}
+const app = setupError ? null : initializeApp(config);
+export const auth = app ? getAuth(app) : null;
+export const db = app ? getFirestore(app) : null;

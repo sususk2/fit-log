@@ -9,35 +9,38 @@
 
 ## 로컬 실행
 
-필요: Node.js 20 이상
+필요: Node.js 24 (`.nvmrc`), Git Bash 기준
 
 ```bash
 npm install
-cp .env.example .env.local   # 값 채우기 (아래 Firebase 설정 참고)
-npm run dev                  # http://localhost:5173
+cp .env.example .env.local   # Firebase 웹 앱 설정값 4개 입력
+npm run dev                  # http://127.0.0.1:5173
 ```
 
 | 명령 | 설명 |
 |------|------|
 | `npm run dev` | 개발 서버 |
 | `npm test` | 단위 테스트 (Vitest) |
-| `npm run build` | 배포용 빌드 → `dist/` |
+| `npm run build` | 설정값 검사 후 배포용 빌드 → `dist/` |
 | `npm run preview` | 빌드 결과 미리보기 |
 
-## Firebase 설정
+설정값이 비어 있으면 앱은 "Firebase 연결 준비" 안내를 보여 주고, `npm run build`는 누락된 항목을 알려 주며 멈춥니다.
 
-1. Firebase 콘솔에서 프로젝트 생성 → 웹 앱 추가 → `firebaseConfig` 값을 `.env.local`에 입력
+## Firebase 설정 (콘솔에서 진행, CLI 불필요)
+
+1. 프로젝트 생성 → 웹 앱 등록(Hosting 체크 안 함) → `apiKey`, `authDomain`, `projectId`, `appId`를 `.env.local`에 입력
 2. Authentication → 로그인 방법 → **이메일/비밀번호** 사용 설정
-3. Firestore Database 생성 후 `firestore.rules` 내용을 규칙 탭에 게시
+3. Firestore Database → Standard, `(default)`, `asia-northeast3`, 프로덕션 모드로 생성
+4. Firestore → 규칙 탭에 `firestore.rules` 전체를 붙여 넣고 게시
 
-### 에뮬레이터로 실행 (Firebase 프로젝트 없이)
+## 배포 (JCloud)
 
 ```bash
-npm install -g firebase-tools
-firebase emulators:start --project demo-fitlog
-# .env.local 에 VITE_USE_EMULATOR=true 설정 후
-npm run dev
+VITE_BASE_PATH=/ npm run build
+# dist/ 안의 파일을 서버의 /var/www/fit-log 로 업로드
 ```
+
+Nginx 설정은 `deploy/nginx-fitlog.conf`를 사용합니다. 화면 경로를 새로고침해도 `index.html`을 돌려주도록 `try_files`가 설정되어 있습니다.
 
 ## 데이터 구조
 
@@ -47,5 +50,7 @@ npm run dev
 
 ## 출처
 
-- Vite React 템플릿 구조 참고, 코드는 본 프로젝트용으로 작성
-- AI(Claude)를 활용해 초안을 작성하고 직접 실행·검토
+| 출처 | 가져온 부분 | 본 프로젝트에서 바꾼 점 |
+|------|-------------|-------------------------|
+| 초급프로젝트 7주차 실습 코드 (mini-todo) | `firebase.js` 설정 검사, `useAuth` 로그인 상태 관찰, 연속 클릭 방지(`pending` ref), `errors.js` 오류 안내, `check-env.mjs`, Nginx 설정, Rules 작성 방식 | 회원가입·닉네임 프로필, 화면 라우팅, 오류 문구 보완, 운동·식단 데이터 구조와 규칙 |
+| AI (Claude) | 코드 초안 작성 | 직접 실행·검토 후 수정 |
