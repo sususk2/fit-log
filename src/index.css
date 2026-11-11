@@ -1,0 +1,59 @@
+:root {
+  --green: #16a34a;
+  --green-dark: #15803d;
+  --bg: #f4f7f5;
+  --card: #ffffff;
+  --text: #1f2a24;
+  --muted: #64746b;
+  --line: #dde5e0;
+  --danger: #b42318;
+  font-family: system-ui, -apple-system, 'Segoe UI', 'Malgun Gothic', sans-serif;
+  color: var(--text);
+  background: var(--bg);
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; }
+h1 { font-size: 24px; margin: 8px 0; }
+a { color: var(--green-dark); font-weight: 600; }
+.muted { color: var(--muted); }
+.hint { color: var(--muted); font-weight: 400; font-size: 13px; }
+
+.center-screen { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 18px; color: var(--green-dark); }
+.brand-mark { width: 22px; height: 22px; border-radius: 6px; background: var(--green); display: inline-block; }
+
+.auth-card {
+  width: min(100%, 400px);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 32px 28px;
+  box-shadow: 0 10px 30px #1f2a2412;
+}
+.auth-card form { display: grid; gap: 14px; margin-top: 18px; }
+label { display: grid; gap: 6px; font-weight: 600; font-size: 14px; }
+input {
+  font: inherit;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+}
+input:focus-visible, button:focus-visible, a:focus-visible { outline: 3px solid #86efac; outline-offset: 2px; }
+.form-error { margin: 0; color: var(--danger); background: #fef3f2; padding: 8px 10px; border-radius: 8px; font-size: 14px; }
+.auth-footer { margin: 18px 0 0; text-align: center; font-size: 14px; }
+
+button { font: inherit; cursor: pointer; border-radius: 10px; }
+button:disabled { opacity: 0.6; cursor: wait; }
+.btn-primary { padding: 11px; border: 0; background: var(--green); color: #fff; font-weight: 700; }
+.btn-primary:hover:not(:disabled) { background: var(--green-dark); }
+.btn-ghost { padding: 7px 12px; border: 1px solid var(--line); background: #fff; }
+
+.app-shell { min-height: 100vh; }
+.topbar {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  padding: 14px 24px; background: var(--card); border-bottom: 1px solid var(--line);
+}
+.topbar-right { display: flex; align-items: center; gap: 12px; font-size: 14px; }
+.content { max-width: 960px; margin: 0 auto; padding: 24px; }
