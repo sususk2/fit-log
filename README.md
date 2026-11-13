@@ -20,7 +20,8 @@ npm run dev                  # http://127.0.0.1:5173
 | 명령 | 설명 |
 |------|------|
 | `npm run dev` | 개발 서버 |
-| `npm test` | 단위 테스트 (Vitest) |
+| `npm test` | 단위 테스트 (Vitest, 에뮬레이터 불필요) |
+| `npm run test:rules:emulator` | Firestore 에뮬레이터에서 Security Rules 테스트 (아래 참고) |
 | `npm run build` | 설정값 검사 후 배포용 빌드 → `dist/` |
 | `npm run preview` | 빌드 결과 미리보기 |
 
@@ -53,9 +54,49 @@ Nginx 설정은 `deploy/nginx-fitlog.conf`를 사용합니다. 화면 경로를 
 
 조회는 `where('date', '==', 날짜)`만 사용하고 정렬은 화면에서 하므로 복합 색인이 필요 없습니다.
 
+## 코드 구조와 디자인 패턴
+
+```
+src/
+├─ domain/   계산·서비스 규칙 (Firebase를 모름)
+├─ data/     저장소·변환·로그인 상태 (Firebase를 아는 유일한 곳)
+├─ lib/      Subject·Singleton·날짜·입력 검사 도구
+├─ hooks/    저장소 구독(useRecords), 저장 요청 공통 처리(useActionRunner)
+├─ components/  Profile·Summary·Workout·Plan·Meal 패널
+└─ pages/HomePage.jsx  화면 조립
+```
+
+| # | 패턴 | 위치 | 하는 일 |
+|---|------|------|---------|
+| 1 | Strategy | `domain/burnStrategies.js` | 유산소/근력 소모 칼로리 계산 교체 |
+| 2 | Strategy | `domain/goalStrategies.js` | 감량/유지/증량 권장 칼로리·단백질 |
+| 3 | Factory | `domain/workoutFactory.js` | 화면 입력 → 검사된 운동 기록 생성 |
+| 4 | State | `domain/planState.js` | 계획 예정 → 완료 → 보관, 상태별 허용 동작 |
+| 5 | Chain of Responsibility | `domain/mealValidation.js` | 식단 입력 단계별 검사(끼니·음식·칼로리·단백질·중복) |
+| 6 | Facade | `domain/DailySummaryService.js` | 오늘의 요약 계산을 한 창구로 |
+| 7 | Command | `domain/commands.js` | 삭제와 실행 취소 |
+| 8 | Repository | `data/firestoreRepository.js`, `data/memoryRepository.js` | Firestore/메모리 저장소를 같은 인터페이스로 |
+| 9 | Adapter | `data/adapters.js` | Firebase User·Snapshot·Timestamp → 앱 객체 |
+| 10 | Observer | `lib/Subject.js`, `data/authStore.js` | 로그인 상태·데이터 변경 알림 |
+| 11 | Singleton | `lib/singleton.js`, `firebase.js` | Firebase 연결 하나만 생성 |
+
+패턴 적용 전(모든 기능을 `HomePage.jsx` 하나에 둔 버전)은 커밋 "feat: 프로필·운동·계획·식단·요약 기능 (변경 전: 단일 컴포넌트 버전)"에 남겨 두었습니다.
+
+## Security Rules 테스트
+
+`firestore.rules`는 비로그인·다른 사용자 요청, 잘못된 값, 끼니 중복, 계획 상태 역행을 서버에서 거절합니다.
+`tests/rules/`의 테스트는 GitHub Actions(`rules-test` 작업)에서 Firestore 에뮬레이터로 자동 실행됩니다.
+내 PC에서 돌리려면 Java 21이 필요합니다.
+
+```bash
+npm install --no-save --legacy-peer-deps @firebase/rules-unit-testing firebase-tools
+npx firebase emulators:exec --only firestore --project demo-fitlog "npm run test:rules"
+```
+
 ## 출처
 
 | 출처 | 가져온 부분 | 본 프로젝트에서 바꾼 점 |
 |------|-------------|-------------------------|
 | 초급프로젝트 7주차 실습 코드 (mini-todo) | `firebase.js` 설정 검사, `useAuth` 로그인 상태 관찰, 연속 클릭 방지(`pending` ref), `errors.js` 오류 안내, `check-env.mjs`, Nginx 설정, Rules 작성 방식 | 회원가입·닉네임 프로필, 화면 라우팅, 오류 문구 보완, 운동·식단 데이터 구조와 규칙 |
-| AI (Claude) | 코드 초안 작성 | 직접 실행·검토 후 수정 |
+| 초급프로젝트 7주차 실습 코드 (mini-todo) `useTodos.run()` | 저장 요청 공통 처리 | `hooks/useActionRunner.js`로 분리, 완료 안내 추가 |
+| AI (Claude) | 코드 초안 작성 (패턴 구조, 테스트, Rules) | 직접 실행·검토 후 수정 |
