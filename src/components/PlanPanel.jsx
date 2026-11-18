@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { PLAN_STATUSES, planStateOf } from '../domain/planState.js';
 
-export default function PlanPanel({ dayLabel, items, loading, busy, onAdd, onRename, onChangeStatus, onDelete }) {
+export default function PlanPanel({ dayLabel, items, loading, busy, feedback, onAdd, onRename, onChangeStatus, onDelete }) {
   const [title, setTitle] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editTitle, setEditTitle] = useState('');
@@ -26,6 +26,7 @@ export default function PlanPanel({ dayLabel, items, loading, busy, onAdd, onRen
           onChange={(e) => setTitle(e.target.value)} />
         <button className="btn-primary" disabled={busy || !title.trim()}>추가</button>
       </form>
+      {feedback}
 
       {loading ? <p className="empty" role="status">계획을 불러오는 중…</p>
         : !sorted.length && <p className="empty">아직 계획이 없습니다.</p>}

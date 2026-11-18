@@ -3,7 +3,7 @@ import { GOAL_STRATEGIES, getGoalStrategy } from '../domain/goalStrategies.js';
 import { profileToForm, validateProfile } from '../domain/profile.js';
 import { isNum } from '../lib/validators.js';
 
-export default function ProfilePanel({ profile, busy, onSave, onCancel, onError }) {
+export default function ProfilePanel({ profile, busy, feedback, onSave, onCancel, onError }) {
   const [form, setForm] = useState(() => profileToForm(profile));
   const set = (key) => (e) => setForm({ ...form, [key]: e.target.value });
   const complete = Boolean(profile?.weightKg);
@@ -51,6 +51,7 @@ export default function ProfilePanel({ profile, busy, onSave, onCancel, onError 
           <button type="submit" className="btn-primary" disabled={busy}>{busy ? '저장 중…' : '저장'}</button>
         </div>
       </form>
+      {feedback}
     </section>
   );
 }

@@ -126,10 +126,29 @@ select:focus-visible { outline: 3px solid #86efac; outline-offset: 2px; }
 .chip { padding: 5px 11px; border: 1px solid var(--line); background: #f8faf9; border-radius: 99px; font-size: 13px; }
 .chip:hover:not(:disabled) { border-color: var(--green); }
 
+/* 저장 결과 안내 (폼 바로 아래) */
+.feedback { display: grid; gap: 8px; margin: -4px 0 14px; }
+.feedback .form-ok, .feedback .form-error { margin: 0; }
+.offline-banner {
+  margin: 0 0 12px; padding: 9px 12px; border-radius: 8px; font-size: 14px;
+  background: #fffaeb; color: #93370d; border: 1px solid #fedf89;
+}
+.day-bar input[type="date"] { width: auto; }
+
 @media (max-width: 560px) {
   .content { padding: 14px; }
-  .topbar { padding: 12px 14px; }
+  .topbar { padding: 10px 14px; flex-wrap: wrap; }
+  .topbar-right { gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .topbar-right .btn-ghost { padding: 6px 10px; }
+  .panel { padding: 16px; border-radius: 12px; }
+  .tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .tab { flex: 1 0 auto; padding: 8px 12px; }
+  .grid-form { grid-template-columns: 1fr 1fr; }
+  .stats { grid-template-columns: 1fr 1fr; }
+  .stat strong { font-size: 22px; }
   .item-list li { flex-wrap: wrap; }
+  .item-actions { margin-left: auto; }
+  .add-form.wide input.narrow { flex: 1 1 70px; }
 }
 .link-button {
   margin-left: 10px; padding: 0; border: 0; background: none;
