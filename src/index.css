@@ -75,7 +75,10 @@ select:focus-visible { outline: 3px solid #86efac; outline-offset: 2px; }
   background: var(--card); border: 1px solid var(--line); border-radius: 16px;
   padding: 22px; margin-top: 14px;
 }
-.grid-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; align-items: end; margin: 12px 0 16px; }
+.grid-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px 14px; align-items: end; margin: 12px 0 16px; }
+/* 입력 칸이 기본 너비(약 20자)를 고집해 옆 칸을 덮지 않도록 칸 너비에 맞춘다 */
+.grid-form label { min-width: 0; }
+.grid-form input, .grid-form select { width: 100%; min-width: 0; }
 .form-actions { display: flex; gap: 8px; justify-content: flex-end; grid-column: 1 / -1; }
 .form-actions .btn-primary { padding: 10px 18px; }
 
