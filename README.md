@@ -1,6 +1,6 @@
 # FitLog · 운동·식단 기록
 
-운동 기록과 식단 기록을 남기고, 하루 목표 대비 달성률을 확인하는 웹 서비스입니다.
+운동 기록과 식단 기록을 남기고, 하루 목표 대비 달성률과 최근 7일 달성 현황을 확인하는 웹 서비스입니다.
 초급프로젝트 Term Project (개인).
 
 - 화면: React 19 + Vite
@@ -33,6 +33,23 @@ npm run dev                  # http://127.0.0.1:5173
 2. Authentication → 로그인 방법 → **이메일/비밀번호** 사용 설정
 3. Firestore Database → Standard, `(default)`, `asia-northeast3`, 프로덕션 모드로 생성
 4. Firestore → 규칙 탭에 `firestore.rules` 전체를 붙여 넣고 게시
+5. (배포 후) Authentication → 설정 → **승인된 도메인**에 JCloud 접속 주소(도메인 또는 IP)를 추가
+   — 추가하지 않으면 배포 주소에서 로그인 요청이 거절될 수 있습니다. `localhost`는 기본으로 들어 있습니다.
+
+테스트 계정의 비밀번호와 Firebase 설정값은 저장소에 넣지 않습니다. (`.env.local`은 `.gitignore` 대상, 테스트 계정은 LMS 제출란에 기재)
+
+## 기능 확인 순서 (채점용)
+
+1. 회원가입(닉네임, 이메일, 비밀번호 12자 이상) 또는 제출한 테스트 계정으로 로그인
+2. 처음 로그인하면 **프로필·목표 설정**: 체중 입력 → `권장값 채우기` → 저장
+3. **운동** 탭: 유산소(예: 달리기 30분)와 근력(예: 스쿼트 5세트×10회 60kg) 기록 → 소모 칼로리 자동 계산 확인
+4. **계획** 탭: 계획 추가 → `완료` → `보관` (완료 후에는 수정 버튼이 없고, 서버에서도 수정이 거절됨)
+5. **식단** 탭: 자주 먹는 음식 버튼으로 점심 기록 → 같은 날 점심을 한 번 더 추가하면 "하루에 하나만" 안내 / 간식은 여러 개 가능 / 기록 수정
+6. **요약** 탭: 섭취·소모·순섭취, 목표 달성 여부, 연속 기록일, 최근 7일 달성 현황
+7. 기록 삭제 → 안내 옆 `실행 취소`로 복구
+8. 새로고침, 로그아웃 후 재로그인 → 기록 유지 확인
+9. 다른 계정(계정 B)으로 로그인 → 계정 A의 기록이 보이지 않음 (Rules에서 다른 사용자 요청 거절)
+10. 예외 상황: 빈 칼로리로 저장, 미래 날짜 선택, 브라우저 개발자 도구에서 Offline 전환 후 저장
 
 ## 배포 (JCloud)
 
@@ -52,7 +69,7 @@ Nginx 설정은 `deploy/nginx-fitlog.conf`를 사용합니다. 화면 경로를 
 | `users/{uid}/meals/{날짜_끼니}` | 날짜, 끼니, 음식, 칼로리, 단백질 (간식은 자동ID) | 본인만 |
 | `users/{uid}/plans/{자동ID}` | 날짜, 제목, 상태(planned → done → archived) | 본인만 |
 
-조회는 `where('date', '==', 날짜)`만 사용하고 정렬은 화면에서 하므로 복합 색인이 필요 없습니다.
+조회는 `date` 한 필드 조건(`==` 또는 7일 통계용 `>=`·`<=` 범위)만 사용하고 정렬은 화면에서 하므로 복합 색인이 필요 없습니다.
 
 ## 코드 구조와 디자인 패턴
 
@@ -66,19 +83,20 @@ src/
 └─ pages/HomePage.jsx  화면 조립
 ```
 
+서로 다른 디자인 패턴 **10종**을 적용했습니다. (같은 패턴을 여러 곳에 쓴 경우 1종으로 셈)
+
 | # | 패턴 | 위치 | 하는 일 |
 |---|------|------|---------|
-| 1 | Strategy | `domain/burnStrategies.js` | 유산소/근력 소모 칼로리 계산 교체 |
-| 2 | Strategy | `domain/goalStrategies.js` | 감량/유지/증량 권장 칼로리·단백질 |
-| 3 | Factory | `domain/workoutFactory.js` | 화면 입력 → 검사된 운동 기록 생성 |
-| 4 | State | `domain/planState.js` | 계획 예정 → 완료 → 보관, 상태별 허용 동작 |
-| 5 | Chain of Responsibility | `domain/mealValidation.js` | 식단 입력 단계별 검사(끼니·음식·칼로리·단백질·중복) |
-| 6 | Facade | `domain/DailySummaryService.js` | 오늘의 요약 계산을 한 창구로 |
-| 7 | Command | `domain/commands.js` | 삭제와 실행 취소 |
-| 8 | Repository | `data/firestoreRepository.js`, `data/memoryRepository.js` | Firestore/메모리 저장소를 같은 인터페이스로 |
-| 9 | Adapter | `data/adapters.js` | Firebase User·Snapshot·Timestamp → 앱 객체 |
-| 10 | Observer | `lib/Subject.js`, `data/authStore.js` | 로그인 상태·데이터 변경 알림 |
-| 11 | Singleton | `lib/singleton.js`, `firebase.js` | Firebase 연결 하나만 생성 |
+| 1 | Strategy | `domain/burnStrategies.js` (CardioBurnStrategy·StrengthBurnStrategy), `domain/goalStrategies.js` (Lose·Maintain·GainStrategy) | 운동 종류별 소모 칼로리 계산, 목표별 권장값과 달성 판단 |
+| 2 | Factory | `domain/workoutFactory.js` `createWorkout` | 화면 입력 → 종류에 맞게 검사·계산된 운동 기록 생성 |
+| 3 | State | `domain/planState.js` (Planned·Done·ArchivedState) | 계획 예정 → 완료 → 보관, 상태별 허용 동작 |
+| 4 | Chain of Responsibility | `domain/mealValidation.js` (MealHandler 하위 처리자 5개) | 식단 입력 단계별 검사(끼니·음식·칼로리·단백질·중복) |
+| 5 | Facade | `domain/DailySummaryService.js` | 오늘의 요약·최근 7일 통계 계산 창구 |
+| 6 | Command | `domain/commands.js` (DeleteRecordCommand·CommandHistory) | 삭제와 실행 취소 |
+| 7 | Repository | `data/firestoreRepository.js`, `data/memoryRepository.js` | Firestore/메모리 저장소를 같은 인터페이스로 |
+| 8 | Adapter | `data/adapters.js` | Firebase User·Snapshot·Timestamp → 앱 객체 |
+| 9 | Observer | `lib/Subject.js`, `data/authStore.js` → `useAuth.js` | 로그인 상태·데이터 변경 알림 |
+| 10 | Singleton | `lib/singleton.js`, `firebase.js` `getFirebase` | Firebase 연결 하나만 생성 |
 
 패턴 적용 전(모든 기능을 `HomePage.jsx` 하나에 둔 버전)은 커밋 "feat: 프로필·운동·계획·식단·요약 기능 (변경 전: 단일 컴포넌트 버전)"에 남겨 두었습니다.
 

@@ -1,3 +1,5 @@
+import WeeklyStats from './WeeklyStats.jsx';
+
 function Stat({ label, value, unit, pct, note }) {
   return (
     <div className="stat">
@@ -10,12 +12,19 @@ function Stat({ label, value, unit, pct, note }) {
 }
 
 // 화면은 DailySummaryService(Facade)가 만든 요약 객체를 보여 주기만 한다.
-export default function SummaryPanel({ summary, dayLabel, feedback }) {
+export default function SummaryPanel({ summary, weekly, weeklyLoading, date, dayLabel, feedback }) {
   const s = summary;
   return (
     <section className="panel">
       <h2>{dayLabel}의 요약</h2>
-      <p className="muted">목표: {s.goalLabel} · {s.calorieGoal}kcal · 단백질 {s.proteinGoal}g</p>
+      <p className="muted">
+        목표: {s.goalLabel} · {s.calorieGoal}kcal · 단백질 {s.proteinGoal}g
+        {s.mealCount > 0 && (
+          <span className={s.goalAchieved ? 'goal-badge ok' : 'goal-badge'}>
+            {s.goalAchieved ? '목표 달성' : '목표 미달성'}
+          </span>
+        )}
+      </p>
       {feedback}
       <div className="stats">
         <Stat label="섭취" value={s.intake} unit="kcal" pct={s.caloriePct} note={`목표의 ${s.caloriePct}%`} />
@@ -29,6 +38,7 @@ export default function SummaryPanel({ summary, dayLabel, feedback }) {
       {s.mealCount === 0 && s.workoutCount === 0 && (
         <p className="empty">아직 {dayLabel} 기록이 없습니다. 운동이나 식단 탭에서 기록을 추가해 보세요.</p>
       )}
+      <WeeklyStats weekly={weekly} loading={weeklyLoading} selectedDate={date} />
     </section>
   );
 }

@@ -5,6 +5,7 @@
 //
 // 기록 저장소 인터페이스
 //   watchByDate(date, onData, onError) → 해제 함수   // where('date','==',date)만 사용 → 복합 색인 불필요
+//   watchRange(from, to, onData, onError) → 해제 함수 // 기간 통계용 (date 한 필드 범위 조건 → 복합 색인 불필요)
 //   watchRecentDates(onData, onError) → 해제 함수    // 연속 기록일 계산용 최근 날짜 목록
 //   add(fields) → id          // 자동 ID
 //   put(id, fields) → id      // 정해진 ID로 새로 만들기 (끼니 문서)
@@ -34,6 +35,11 @@ export class FirestoreRecordRepository {
 
   watchByDate(date, onData, onError) {
     const q = query(this.collectionRef(), where('date', '==', date));
+    return onSnapshot(q, (snap) => onData(snap.docs.map(fromSnapshot)), onError);
+  }
+
+  watchRange(from, to, onData, onError) {
+    const q = query(this.collectionRef(), where('date', '>=', from), where('date', '<=', to));
     return onSnapshot(q, (snap) => onData(snap.docs.map(fromSnapshot)), onError);
   }
 

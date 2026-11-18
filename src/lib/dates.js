@@ -24,3 +24,11 @@ export function checkRecordDate(key, today = todayKey()) {
   if (key > today) return '미래 날짜에는 기록할 수 없습니다.';
   return null;
 }
+
+const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+
+/** "2026-11-18" → "11/18 (수)" */
+export function shortDayLabel(key) {
+  const [y, m, d] = key.split('-').map(Number);
+  return `${m}/${d} (${WEEKDAYS[new Date(y, m - 1, d).getDay()]})`;
+}

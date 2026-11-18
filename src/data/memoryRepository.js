@@ -41,6 +41,12 @@ export class MemoryRecordRepository {
     return this.subject.subscribe(emit);
   }
 
+  watchRange(from, to, onData) {
+    const emit = () => onData(this.list().filter((item) => item.date >= from && item.date <= to));
+    emit();
+    return this.subject.subscribe(emit);
+  }
+
   watchRecentDates(onData) {
     const emit = () => onData(this.list().map((item) => item.date).sort().reverse());
     emit();

@@ -1,12 +1,13 @@
 // [변경 후] 화면 조립만 담당한다.
 // - 계산·규칙: src/domain (Strategy·Factory·State·Chain of Responsibility·Facade·Command)
+// - 디자인 패턴은 모두 10종 (README "코드 구조와 디자인 패턴" 참고)
 // - 저장: src/data (Repository·Adapter·Observer), Firebase 연결은 Singleton
 // - 변경 전 단일 컴포넌트 버전은 커밋 "feat: 프로필·운동·계획·식단·요약 기능 (변경 전 …)"에 남아 있다.
 import { useMemo, useRef, useState } from 'react';
 import { signOut } from 'firebase/auth';
 import { auth, db } from '../firebase.js';
 import { createFirestoreRepositories } from '../data/firestoreRepository.js';
-import { useDayRecords, useProfile, useRecentDates } from '../hooks/useRecords.js';
+import { useDayRecords, useProfile, useRangeRecords, useRecentDates } from '../hooks/useRecords.js';
 import { useActionRunner } from '../hooks/useActionRunner.js';
 import { useOnlineStatus } from '../hooks/useOnlineStatus.js';
 import { createWorkout } from '../domain/workoutFactory.js';
@@ -44,6 +45,9 @@ export default function HomePage({ user, repositories }) {
   const meals = useDayRecords(repos.meals, date);
   const plans = useDayRecords(repos.plans, date);
   const recordedDates = useRecentDates(recentSources);
+  const weekStart = shiftDay(date, -6);
+  const weekMeals = useRangeRecords(repos.meals, weekStart, date);
+  const weekWorkouts = useRangeRecords(repos.workouts, weekStart, date);
 
   const profile = profileState.profile;
   const needsProfile = !profileState.loading && !isProfileComplete(profile);
@@ -52,6 +56,10 @@ export default function HomePage({ user, repositories }) {
   // Facade: 요약 계산은 한 번의 호출로
   const summary = summaryService.summarize({
     profile, meals: meals.items, workouts: workouts.items, plans: plans.items, recordedDates,
+  });
+
+  const weekly = summaryService.weekly({
+    profile, meals: weekMeals.items, workouts: weekWorkouts.items, endDate: date,
   });
 
   const today = todayKey();
@@ -201,7 +209,10 @@ export default function HomePage({ user, repositories }) {
               ))}
             </nav>
 
-            {tab === 'summary' && <SummaryPanel summary={summary} dayLabel={dayLabel} feedback={feedback} />}
+            {tab === 'summary' && (
+              <SummaryPanel summary={summary} weekly={weekly} weeklyLoading={weekMeals.loading || weekWorkouts.loading}
+                date={date} dayLabel={dayLabel} feedback={feedback} />
+            )}
             {tab === 'workouts' && (
               <WorkoutPanel dayLabel={dayLabel} items={workouts.items} loading={workouts.loading} busy={busy} feedback={feedback}
                 onAdd={addWorkout} onDelete={(w) => deleteRecord(repos.workouts, w, w.name)} />

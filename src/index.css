@@ -154,3 +154,32 @@ select:focus-visible { outline: 3px solid #86efac; outline-offset: 2px; }
   margin-left: 10px; padding: 0; border: 0; background: none;
   color: var(--green-dark); font-weight: 700; text-decoration: underline;
 }
+
+/* 오늘 달성 표시 · 최근 7일 통계 */
+.goal-badge {
+  display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 99px;
+  font-size: 12px; font-weight: 700; background: #f2f4f3; color: var(--muted);
+}
+.goal-badge.ok { background: #dcfce7; color: #166534; }
+.weekly { margin-top: 22px; padding-top: 6px; border-top: 1px solid var(--line); }
+.section-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.weekly-summary { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 4px 0 12px; font-size: 14px; color: var(--muted); }
+.weekly-summary strong { color: var(--text); font-size: 16px; }
+.week-bars { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.week-bars li {
+  display: grid; grid-template-columns: 78px 1fr 150px 18px; align-items: center; gap: 10px;
+  font-size: 13px; padding: 3px 6px; border-radius: 8px;
+}
+.week-bars li.current { background: #f0fdf4; }
+.week-day { color: var(--muted); white-space: nowrap; }
+.week-track { position: relative; height: 12px; background: #eef2ef; border-radius: 99px; }
+.week-fill { position: absolute; left: 0; top: 0; bottom: 0; background: #b7c3bc; border-radius: 99px; }
+.week-fill.ok { background: var(--green); }
+.week-goal { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--text); opacity: 0.55; }
+.week-value { white-space: nowrap; }
+.week-value small { color: var(--muted); }
+.week-mark { color: var(--green-dark); font-weight: 800; text-align: center; }
+@media (max-width: 560px) {
+  .week-bars li { grid-template-columns: 64px 1fr 18px; }
+  .week-value { grid-column: 2 / 3; grid-row: 2; font-size: 12px; }
+}

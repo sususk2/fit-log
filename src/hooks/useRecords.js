@@ -31,6 +31,21 @@ export function useDayRecords(repository, date) {
   return state;
 }
 
+export function useRangeRecords(repository, from, to) {
+  const [state, setState] = useState({ items: [], loading: true, error: '' });
+
+  useEffect(() => {
+    setState({ items: [], loading: true, error: '' });
+    return repository.watchRange(
+      from, to,
+      (items) => setState({ items, loading: false, error: '' }),
+      (error) => setState({ items: [], loading: false, error: errorMessage(error) }),
+    );
+  }, [repository, from, to]);
+
+  return state;
+}
+
 /** 여러 저장소의 최근 기록 날짜를 합친다 (연속 기록일 계산용, 실패해도 화면을 막지 않음) */
 export function useRecentDates(repositories) {
   const [datesByIndex, setDatesByIndex] = useState([]);

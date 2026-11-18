@@ -87,3 +87,13 @@ describe('Command: 삭제와 실행 취소', () => {
     expect(history.stack.map((c) => c.label)).toEqual(['B', 'C']);
   });
 });
+
+describe('Repository: 기간 조회', () => {
+  it('시작~끝 날짜(포함) 기록만 알린다', async () => {
+    const repo = new MemoryRecordRepository();
+    for (const date of ['2026-11-06', '2026-11-07', '2026-11-13', '2026-11-14']) await repo.add({ date });
+    let got = [];
+    repo.watchRange('2026-11-07', '2026-11-13', (items) => { got = items.map((i) => i.date); });
+    expect(got).toEqual(['2026-11-07', '2026-11-13']);
+  });
+});

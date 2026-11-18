@@ -35,3 +35,29 @@ describe('Strategy: 목표별 권장 칼로리', () => {
     expect(() => getGoalStrategy('bulk')).toThrow();
   });
 });
+
+describe('Strategy: 목표별 달성 판단', () => {
+  it('감량은 목표 이하(5% 여유)일 때 달성', () => {
+    const lose = getGoalStrategy('lose');
+    expect(lose.isAchieved(1800, 2000)).toBe(true);
+    expect(lose.isAchieved(2100, 2000)).toBe(true);   // 5% 이내
+    expect(lose.isAchieved(2200, 2000)).toBe(false);
+    expect(lose.isAchieved(0, 2000)).toBe(false);     // 기록이 없으면 달성 아님
+  });
+  it('유지는 ±10% 안일 때 달성', () => {
+    const keep = getGoalStrategy('maintain');
+    expect(keep.isAchieved(1800, 2000)).toBe(true);
+    expect(keep.isAchieved(2200, 2000)).toBe(true);
+    expect(keep.isAchieved(1700, 2000)).toBe(false);
+    expect(keep.isAchieved(2300, 2000)).toBe(false);
+  });
+  it('증량은 목표 이상(5% 여유)일 때 달성', () => {
+    const gain = getGoalStrategy('gain');
+    expect(gain.isAchieved(1900, 2000)).toBe(true);
+    expect(gain.isAchieved(1800, 2000)).toBe(false);
+  });
+  it('같은 섭취량이라도 목표에 따라 결과가 달라진다', () => {
+    expect(['lose', 'maintain', 'gain'].map((t) => getGoalStrategy(t).isAchieved(1600, 2000)))
+      .toEqual([true, false, false]);
+  });
+});
