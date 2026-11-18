@@ -10,12 +10,13 @@ function Stat({ label, value, unit, pct, note }) {
 }
 
 // 화면은 DailySummaryService(Facade)가 만든 요약 객체를 보여 주기만 한다.
-export default function SummaryPanel({ summary, dayLabel }) {
+export default function SummaryPanel({ summary, dayLabel, feedback }) {
   const s = summary;
   return (
     <section className="panel">
       <h2>{dayLabel}의 요약</h2>
       <p className="muted">목표: {s.goalLabel} · {s.calorieGoal}kcal · 단백질 {s.proteinGoal}g</p>
+      {feedback}
       <div className="stats">
         <Stat label="섭취" value={s.intake} unit="kcal" pct={s.caloriePct} note={`목표의 ${s.caloriePct}%`} />
         <Stat label="단백질" value={s.protein} unit="g" pct={s.proteinPct} note={`목표의 ${s.proteinPct}%`} />

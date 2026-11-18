@@ -3,7 +3,7 @@ import { FOOD_PRESETS, MEAL_LABEL, MEAL_TYPES, sortMeals } from '../domain/meals
 
 const EMPTY = { mealType: 'breakfast', food: '', kcal: '', proteinG: '' };
 
-export default function MealPanel({ dayLabel, items, loading, busy, onAdd, onEdit, onDelete }) {
+export default function MealPanel({ dayLabel, items, loading, busy, feedback, onAdd, onEdit, onDelete }) {
   const [form, setForm] = useState(EMPTY);
   const [editingId, setEditingId] = useState(null);
   const [edit, setEdit] = useState({ food: '', kcal: '', proteinG: '' });
@@ -50,6 +50,7 @@ export default function MealPanel({ dayLabel, items, loading, busy, onAdd, onEdi
           <button type="submit" className="btn-primary" disabled={busy}>{busy ? '저장 중…' : '기록 추가'}</button>
         </div>
       </form>
+      {feedback}
 
       {loading ? <p className="empty" role="status">식단을 불러오는 중…</p>
         : !sorted.length && <p className="empty">아직 식단 기록이 없습니다. 위의 자주 먹는 음식을 눌러 빠르게 입력해 보세요.</p>}

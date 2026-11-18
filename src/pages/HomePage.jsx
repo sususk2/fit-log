@@ -8,6 +8,7 @@ import { auth, db } from '../firebase.js';
 import { createFirestoreRepositories } from '../data/firestoreRepository.js';
 import { useDayRecords, useProfile, useRecentDates } from '../hooks/useRecords.js';
 import { useActionRunner } from '../hooks/useActionRunner.js';
+import { useOnlineStatus } from '../hooks/useOnlineStatus.js';
 import { createWorkout } from '../domain/workoutFactory.js';
 import { validateMeal } from '../domain/mealValidation.js';
 import { MEAL_LABEL, mealDocId } from '../domain/meals.js';
@@ -15,7 +16,8 @@ import { planStateOf, validatePlanTitle } from '../domain/planState.js';
 import { summaryService } from '../domain/DailySummaryService.js';
 import { CommandHistory, DeleteRecordCommand } from '../domain/commands.js';
 import { isProfileComplete } from '../domain/profile.js';
-import { shiftDay, todayKey } from '../lib/dates.js';
+import { checkRecordDate, shiftDay, todayKey } from '../lib/dates.js';
+import Feedback from '../components/Feedback.jsx';
 import ProfilePanel from '../components/ProfilePanel.jsx';
 import SummaryPanel from '../components/SummaryPanel.jsx';
 import WorkoutPanel from '../components/WorkoutPanel.jsx';
@@ -36,6 +38,7 @@ export default function HomePage({ user, repositories }) {
   const history = useRef(new CommandHistory());
 
   const { busy, message, notice, run, fail, clear } = useActionRunner();
+  const online = useOnlineStatus();
   const profileState = useProfile(repos.profile);
   const workouts = useDayRecords(repos.workouts, date);
   const meals = useDayRecords(repos.meals, date);
@@ -134,12 +137,20 @@ export default function HomePage({ user, repositories }) {
 
   async function logout() {
     history.current.clear();
-    await run(() => signOut(auth));
+    await run(() => signOut(auth), '', { requireOnline: false });
   }
 
   function moveDay(next) {
+    const invalid = checkRecordDate(next, todayKey());
+    if (invalid) return fail(invalid);
     clear();
     setDate(next);
+    return true;
+  }
+
+  function changeTab(next) {
+    clear();
+    setTab(next);
   }
 
   if (profileState.loading) {
@@ -147,6 +158,11 @@ export default function HomePage({ user, repositories }) {
   }
 
   const showProfile = editingProfile || needsProfile;
+  const canUndo = Boolean(notice && undoLabel && history.current.canUndo());
+  const feedback = (
+    <Feedback message={message} notice={notice}
+      action={canUndo && <button className="link-button" disabled={busy} onClick={undo}>실행 취소</button>} />
+  );
 
   return (
     <div className="app-shell">
@@ -160,20 +176,14 @@ export default function HomePage({ user, repositories }) {
       </header>
 
       <main className="content">
-        {loadError && <p className="form-error" role="alert">{loadError}</p>}
-        {message && <p className="form-error" role="alert">{message}</p>}
-        {notice && (
-          <p className="form-ok" role="status">
-            {notice}
-            {undoLabel && history.current.canUndo() && (
-              <button className="link-button" disabled={busy} onClick={undo}>실행 취소</button>
-            )}
-          </p>
+        {!online && (
+          <p className="offline-banner" role="status">인터넷 연결이 끊겼습니다. 연결되면 기록을 다시 불러옵니다. 그동안 저장은 할 수 없습니다.</p>
         )}
+        {loadError && <p className="form-error" role="alert">기록을 불러오지 못했습니다. {loadError}</p>}
 
         {showProfile ? (
-          <ProfilePanel key={profile?.id ?? 'new'} profile={profile} busy={busy}
-            onSave={saveProfile} onCancel={() => setEditingProfile(false)} onError={fail} />
+          <ProfilePanel key={profile?.id ?? 'new'} profile={profile} busy={busy} feedback={feedback}
+            onSave={saveProfile} onCancel={() => { clear(); setEditingProfile(false); }} onError={fail} />
         ) : (
           <>
             <div className="day-bar">
@@ -187,21 +197,21 @@ export default function HomePage({ user, repositories }) {
             <nav className="tabs" aria-label="기록 종류">
               {TABS.map(([key, label]) => (
                 <button key={key} className={tab === key ? 'tab active' : 'tab'} aria-pressed={tab === key}
-                  onClick={() => setTab(key)}>{label}</button>
+                  onClick={() => changeTab(key)}>{label}</button>
               ))}
             </nav>
 
-            {tab === 'summary' && <SummaryPanel summary={summary} dayLabel={dayLabel} />}
+            {tab === 'summary' && <SummaryPanel summary={summary} dayLabel={dayLabel} feedback={feedback} />}
             {tab === 'workouts' && (
-              <WorkoutPanel dayLabel={dayLabel} items={workouts.items} loading={workouts.loading} busy={busy}
+              <WorkoutPanel dayLabel={dayLabel} items={workouts.items} loading={workouts.loading} busy={busy} feedback={feedback}
                 onAdd={addWorkout} onDelete={(w) => deleteRecord(repos.workouts, w, w.name)} />
             )}
             {tab === 'plans' && (
-              <PlanPanel dayLabel={dayLabel} items={plans.items} loading={plans.loading} busy={busy}
+              <PlanPanel dayLabel={dayLabel} items={plans.items} loading={plans.loading} busy={busy} feedback={feedback}
                 onAdd={addPlan} onRename={renamePlan} onChangeStatus={changePlanStatus} onDelete={deletePlan} />
             )}
             {tab === 'meals' && (
-              <MealPanel dayLabel={dayLabel} items={meals.items} loading={meals.loading} busy={busy}
+              <MealPanel dayLabel={dayLabel} items={meals.items} loading={meals.loading} busy={busy} feedback={feedback}
                 onAdd={addMeal} onEdit={editMeal}
                 onDelete={(m) => deleteRecord(repos.meals, m, `${MEAL_LABEL[m.mealType]} · ${m.food}`)} />
             )}

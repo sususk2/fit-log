@@ -82,6 +82,25 @@ src/
 
 패턴 적용 전(모든 기능을 `HomePage.jsx` 하나에 둔 버전)은 커밋 "feat: 프로필·운동·계획·식단·요약 기능 (변경 전: 단일 컴포넌트 버전)"에 남겨 두었습니다.
 
+## 예외 처리
+
+| 상황 | 처리 | 위치 |
+|------|------|------|
+| 입력 오류 (빈 값·범위·형식) | 저장 전에 막고 폼 바로 아래에 안내 | `domain/*` 검사, `components/Feedback.jsx` |
+| 끼니 중복 (같은 날 점심 두 번) | 화면에서 막고, 서버 Rules에서도 거절 | `domain/mealValidation.js`, `firestore.rules` |
+| 계획 상태 역행·완료 후 수정 | 버튼을 숨기고, 서버 Rules에서도 거절 | `domain/planState.js`, `firestore.rules` |
+| 로그인 실패 | 오류 코드를 한국어로 안내, 비밀번호 칸 비움 | `pages/LoginPage.jsx`, `errors.js` |
+| 로딩 | 프로필·목록마다 "불러오는 중" 표시 | 각 패널 |
+| 빈 목록 | 목록마다 첫 기록을 안내 | 각 패널 |
+| 저장 실패 (권한·서버 오류) | 오류 안내, 입력값 유지 | `hooks/useActionRunner.js` |
+| 오프라인 | 상단 표시, 저장 요청을 보내지 않음 (연결 후 중복 저장 방지) | `hooks/useOnlineStatus.js`, `useActionRunner.js` |
+| 저장 지연 (10초 초과) | 기다리기를 멈추고 안내, 버튼 다시 사용 가능 | `lib/withTimeout.js` |
+| 연속 클릭 | 첫 요청이 끝날 때까지 무시 | `useActionRunner.js` (pending ref) |
+| 미래·잘못된 날짜 | 날짜 이동을 막고 안내 | `lib/dates.js` `checkRecordDate` |
+| 실수로 삭제 | 실행 취소 버튼 (보관한 계획은 확인창) | `domain/commands.js` |
+| 화면 오류 | 흰 화면 대신 새로고침 안내 | `components/ErrorBoundary.jsx` |
+| Firebase 설정 누락 | "Firebase 연결 준비" 안내, 빌드 중단 | `App.jsx`, `scripts/check-env.mjs` |
+
 ## Security Rules 테스트
 
 `firestore.rules`는 비로그인·다른 사용자 요청, 잘못된 값, 끼니 중복, 계획 상태 역행을 서버에서 거절합니다.

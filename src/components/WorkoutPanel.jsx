@@ -8,7 +8,7 @@ function emptyFor(type) {
   return { ...EMPTY, type, name: type === 'cardio' ? '걷기' : '' };
 }
 
-export default function WorkoutPanel({ dayLabel, items, loading, busy, onAdd, onDelete }) {
+export default function WorkoutPanel({ dayLabel, items, loading, busy, feedback, onAdd, onDelete }) {
   const [form, setForm] = useState(EMPTY);
   const set = (key) => (e) => setForm({ ...form, [key]: e.target.value });
   const sorted = [...items].sort((a, b) => (a.createdAtMs ?? Infinity) - (b.createdAtMs ?? Infinity));
@@ -61,6 +61,7 @@ export default function WorkoutPanel({ dayLabel, items, loading, busy, onAdd, on
           <button type="submit" className="btn-primary" disabled={busy}>{busy ? '저장 중…' : '기록 추가'}</button>
         </div>
       </form>
+      {feedback}
 
       {loading ? <p className="empty" role="status">운동 기록을 불러오는 중…</p>
         : !sorted.length && <p className="empty">아직 운동 기록이 없습니다. 첫 운동을 기록해 보세요.</p>}

@@ -14,6 +14,10 @@ const MESSAGES = {
   'auth/network-request-failed': '인터넷 연결을 확인해 주세요.',
   'permission-denied': '권한이 없는 요청입니다. 로그인 상태를 확인해 주세요.',
   unavailable: '서버에 연결할 수 없습니다. 인터넷 연결을 확인해 주세요.',
+  'deadline-exceeded': '서버 응답이 늦습니다. 잠시 뒤 다시 시도해 주세요.',
+  'resource-exhausted': '요청이 많습니다. 잠시 뒤 다시 시도해 주세요.',
+  'fitlog/timeout': '저장이 지연되고 있습니다. 연결되면 자동으로 저장될 수 있으니 목록을 확인한 뒤 다시 시도해 주세요.',
+  'fitlog/offline': '인터넷 연결이 끊겨 저장할 수 없습니다. 연결을 확인한 뒤 다시 시도해 주세요.',
 };
 
 export function errorMessage(error) {
