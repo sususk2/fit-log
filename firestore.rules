@@ -1,16 +1,129 @@
 rules_version = '2';
+// FitLog Firestore 보안 규칙
+// 7주차 실습 rules(isOwner + validTodo + create/update 분리 + createdAt == request.time
+// + affectedKeys().hasOnly)를 템플릿으로 컬렉션 4개에 확장하고, 서비스 규칙을 서버에서도 막는다.
+//   - 비로그인·다른 사람 요청 거절 (경로의 uid == 로그인 uid)
+//   - 아침·점심·저녁은 문서 ID "날짜_끼니"로 고정 → 같은 끼니 두 번 만들기 거절
+//   - 계획: 예정 → 완료 → 보관 순서만 허용, 완료 후 제목 수정·삭제 거절
+// 규칙에 적힌 경로 외에는 모두 거절된다 (Firestore 기본 동작).
 service cloud.firestore {
   match /databases/{database}/documents {
-    // 로그인한 본인만 자기 문서(users/{uid})와 그 아래 데이터를 읽고 쓸 수 있다.
-    match /users/{uid}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
     }
+    function isDateKey(value) {
+      return value is string && value.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+    }
+    function isText(value, max) {
+      return value is string && value.size() > 0 && value.size() <= max && value.matches('.*[^ ].*');
+    }
+    function isIntIn(value, low, high) {
+      return value is int && value >= low && value <= high;
+    }
+    function isNumIn(value, low, high) {
+      return (value is int || value is float) && value >= low && value <= high;
+    }
+    function createdNow() {
+      return request.resource.data.createdAt == request.time;
+    }
+    function changedOnly(keys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+    }
+
+    // ── 프로필: users/{uid} ──
     match /users/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
-    }
-    // 그 밖의 경로는 모두 거절
-    match /{path=**} {
-      allow read, write: if false;
+      function validProfile(d) {
+        return d.keys().hasAll(['nickname', 'createdAt'])
+          && d.keys().hasOnly(['nickname', 'weightKg', 'goalType', 'calorieGoal', 'proteinGoal', 'createdAt'])
+          && isText(d.nickname, 20)
+          && (!('weightKg' in d) || isNumIn(d.weightKg, 30, 250))
+          && (!('goalType' in d) || d.goalType in ['lose', 'maintain', 'gain'])
+          && (!('calorieGoal' in d) || isIntIn(d.calorieGoal, 1000, 5000))
+          && (!('proteinGoal' in d) || isIntIn(d.proteinGoal, 10, 400))
+          && d.createdAt is timestamp;
+      }
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid) && validProfile(request.resource.data) && createdNow();
+      allow update: if isOwner(uid) && validProfile(request.resource.data)
+        && changedOnly(['nickname', 'weightKg', 'goalType', 'calorieGoal', 'proteinGoal']);
+      allow delete: if false;
+
+      // ── 운동 기록: 수정 기능 없음 (만들기·지우기만) ──
+      match /workouts/{workoutId} {
+        function validWorkout(d) {
+          return d.keys().hasAll(['date', 'type', 'name', 'kcal', 'createdAt'])
+            && isDateKey(d.date)
+            && isText(d.name, 30)
+            && isIntIn(d.kcal, 0, 10000)
+            && d.createdAt is timestamp
+            && (
+              (d.type == 'cardio'
+                && d.keys().hasOnly(['date', 'type', 'name', 'durationMin', 'distanceKm', 'kcal', 'createdAt'])
+                && isIntIn(d.durationMin, 1, 600)
+                && (!('distanceKm' in d) || isNumIn(d.distanceKm, 0, 200)))
+              || (d.type == 'strength'
+                && d.keys().hasOnly(['date', 'type', 'name', 'sets', 'reps', 'weightKg', 'kcal', 'createdAt'])
+                && isIntIn(d.sets, 1, 20)
+                && isIntIn(d.reps, 1, 100)
+                && isNumIn(d.weightKg, 0, 500))
+            );
+        }
+        allow read, delete: if isOwner(uid);
+        allow create: if isOwner(uid) && validWorkout(request.resource.data) && createdNow();
+        allow update: if false;
+      }
+
+      // ── 식단: 아침·점심·저녁은 ID "날짜_끼니", 간식은 자동 ID ──
+      match /meals/{mealId} {
+        function validMeal(d) {
+          return d.keys().hasAll(['date', 'mealType', 'food', 'kcal', 'proteinG', 'createdAt'])
+            && d.keys().hasOnly(['date', 'mealType', 'food', 'kcal', 'proteinG', 'createdAt'])
+            && isDateKey(d.date)
+            && d.mealType in ['breakfast', 'lunch', 'dinner', 'snack']
+            && isText(d.food, 40)
+            && isIntIn(d.kcal, 0, 5000)
+            && isNumIn(d.proteinG, 0, 300)
+            && d.createdAt is timestamp;
+        }
+        function validMealId(d) {
+          return (d.mealType == 'snack' && !mealId.matches('.*_(breakfast|lunch|dinner)$'))
+            || (d.mealType != 'snack' && mealId == d.date + '_' + d.mealType);
+        }
+        allow read, delete: if isOwner(uid);
+        // 이미 있는 끼니 문서에 다시 쓰면 create가 아니라 update로 판단되고,
+        // update는 음식·칼로리·단백질만 바꿀 수 있으므로 createdAt이 바뀌는 덮어쓰기는 거절된다.
+        allow create: if isOwner(uid) && validMeal(request.resource.data)
+          && validMealId(request.resource.data) && createdNow();
+        allow update: if isOwner(uid) && validMeal(request.resource.data)
+          && changedOnly(['food', 'kcal', 'proteinG']);
+      }
+
+      // ── 운동 계획: planned → done → archived ──
+      match /plans/{planId} {
+        function validPlan(d) {
+          return d.keys().hasAll(['date', 'title', 'status', 'createdAt'])
+            && d.keys().hasOnly(['date', 'title', 'status', 'createdAt'])
+            && isDateKey(d.date)
+            && isText(d.title, 40)
+            && d.status in ['planned', 'done', 'archived']
+            && d.createdAt is timestamp;
+        }
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid) && validPlan(request.resource.data)
+          && request.resource.data.status == 'planned' && createdNow();
+        allow update: if isOwner(uid) && validPlan(request.resource.data) && (
+          // 예정: 제목 수정 또는 완료 처리
+          (resource.data.status == 'planned'
+            && changedOnly(['title', 'status'])
+            && request.resource.data.status in ['planned', 'done'])
+          // 완료: 보관으로 바꾸는 것만 (제목 수정 불가)
+          || (resource.data.status == 'done'
+            && changedOnly(['status'])
+            && request.resource.data.status == 'archived')
+        );
+        allow delete: if isOwner(uid) && resource.data.status in ['planned', 'archived'];
+      }
     }
   }
 }
