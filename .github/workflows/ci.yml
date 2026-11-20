@@ -42,5 +42,7 @@ jobs:
         run: |
           npm install
           npm install --no-save --legacy-peer-deps @firebase/rules-unit-testing firebase-tools
+      - name: Show rules test tool versions
+        run: npm ls @firebase/rules-unit-testing firebase-tools --depth=0 || true    
       - name: Rules test (emulator)
         run: npx firebase emulators:exec --only firestore --project demo-fitlog "npm run test:rules"

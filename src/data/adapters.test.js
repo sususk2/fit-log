@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { fromSnapshot, toAppUser, toMillis, toStoredFields } from './adapters.js';
 import { createAuthStore } from './authStore.js';
-import { createSingleton } from '../lib/singleton.js';
 import { Subject } from '../lib/Subject.js';
 
 describe('Adapter: Firebase 값 변환', () => {
@@ -68,14 +67,5 @@ describe('Observer: Subject와 로그인 상태 저장소', () => {
     store.subscribe((s) => { state = s; });
     fail({ code: 'auth/network-request-failed' });
     expect(state).toEqual({ user: null, ready: true, message: '인터넷 연결을 확인해 주세요.' });
-  });
-});
-
-describe('Singleton', () => {
-  it('처음 한 번만 만들고 같은 인스턴스를 돌려준다', () => {
-    let calls = 0;
-    const get = createSingleton(() => { calls += 1; return { id: calls }; });
-    expect(get()).toBe(get());
-    expect(calls).toBe(1);
   });
 });

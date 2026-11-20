@@ -6,7 +6,7 @@ import {
   assertFails, assertSucceeds, initializeTestEnvironment,
 } from '@firebase/rules-unit-testing';
 import {
-  addDoc, collection, deleteDoc, doc, getDoc, serverTimestamp, setDoc, updateDoc,
+  addDoc, collection, deleteDoc, deleteField, doc, getDoc, serverTimestamp, setDoc, updateDoc,
 } from 'firebase/firestore';
 
 const DATE = '2026-11-13';
@@ -95,11 +95,25 @@ describe('운동 기록', () => {
     await assertFails(addDoc(col, { ...workout(), type: 'yoga' }));
     await assertFails(addDoc(col, { ...workout(), createdAt: new Date(0) }));
   });
-  it('운동 기록은 수정할 수 없고 삭제만 된다', async () => {
+  it('수치는 수정할 수 있고, 거리 삭제도 가능하며, 삭제도 된다', async () => {
+    await seed('users/alice/workouts/w1', { date: DATE, type: 'cardio', name: '걷기', durationMin: 30, distanceKm: 2, kcal: 105 });
+    const ref = doc(alice(), 'users/alice/workouts/w1');
+    await assertSucceeds(updateDoc(ref, { durationMin: 45, kcal: 158 }));
+    await assertSucceeds(updateDoc(ref, { distanceKm: deleteField() }));
+    await assertSucceeds(deleteDoc(ref));
+  });
+  it('종류·날짜·생성 시각 변경, 잘못된 값, 다른 종류의 필드 추가는 거절', async () => {
     await seed('users/alice/workouts/w1', { date: DATE, type: 'cardio', name: '걷기', durationMin: 30, kcal: 105 });
     const ref = doc(alice(), 'users/alice/workouts/w1');
-    await assertFails(updateDoc(ref, { kcal: 9999 }));
-    await assertSucceeds(deleteDoc(ref));
+    await assertFails(updateDoc(ref, { type: 'strength' }));
+    await assertFails(updateDoc(ref, { date: '2026-11-14' }));
+    await assertFails(updateDoc(ref, { createdAt: serverTimestamp() }));
+    await assertFails(updateDoc(ref, { durationMin: 0 }));
+    await assertFails(updateDoc(ref, { sets: 3 }));
+  });
+  it('다른 사용자는 운동 기록을 수정할 수 없다', async () => {
+    await seed('users/alice/workouts/w1', { date: DATE, type: 'cardio', name: '걷기', durationMin: 30, kcal: 105 });
+    await assertFails(updateDoc(doc(bob(), 'users/alice/workouts/w1'), { durationMin: 60 }));
   });
 });
 

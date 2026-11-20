@@ -97,3 +97,14 @@ describe('Repository: 기간 조회', () => {
     expect(got).toEqual(['2026-11-07', '2026-11-13']);
   });
 });
+
+describe('Repository: 수정 시 필드 삭제', () => {
+  it('값이 undefined인 필드는 지운다 (거리 입력을 비운 경우)', async () => {
+    const repo = new MemoryRecordRepository();
+    const id = await repo.add({ date: 'x', durationMin: 30, distanceKm: 2 });
+    await repo.update(id, { durationMin: 40, distanceKm: undefined });
+    const item = repo.list()[0];
+    expect(item.durationMin).toBe(40);
+    expect('distanceKm' in item).toBe(false);
+  });
+});

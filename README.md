@@ -42,7 +42,7 @@ npm run dev                  # http://127.0.0.1:5173
 
 1. 회원가입(닉네임, 이메일, 비밀번호 12자 이상) 또는 제출한 테스트 계정으로 로그인
 2. 처음 로그인하면 **프로필·목표 설정**: 체중 입력 → `권장값 채우기` → 저장
-3. **운동** 탭: 유산소(예: 달리기 30분)와 근력(예: 스쿼트 5세트×10회 60kg) 기록 → 소모 칼로리 자동 계산 확인
+3. **운동** 탭: 유산소(예: 달리기 30분)와 근력(예: 스쿼트 5세트×10회 60kg) 기록 → 소모 칼로리 자동 계산 확인 → `수정`으로 시간·세트 등을 바꾸면 칼로리 재계산
 4. **계획** 탭: 계획 추가 → `완료` → `보관` (완료 후에는 수정 버튼이 없고, 서버에서도 수정이 거절됨)
 5. **식단** 탭: 자주 먹는 음식 버튼으로 점심 기록 → 같은 날 점심을 한 번 더 추가하면 "하루에 하나만" 안내 / 간식은 여러 개 가능 / 기록 수정
 6. **요약** 탭: 섭취·소모·순섭취, 목표 달성 여부, 연속 기록일, 최근 7일 달성 현황
@@ -65,7 +65,7 @@ Nginx 설정은 `deploy/nginx-fitlog.conf`를 사용합니다. 화면 경로를 
 | 경로 | 내용 | 접근 |
 |------|------|------|
 | `users/{uid}` | 닉네임, 체중, 목표(감량/유지/증량), 목표 칼로리·단백질, 가입 시각 | 본인만 읽기·쓰기 |
-| `users/{uid}/workouts/{자동ID}` | 날짜, 종류(유산소/근력), 이름, 시간·거리 또는 세트·횟수·무게, 소모 칼로리 | 본인만 |
+| `users/{uid}/workouts/{자동ID}` | 날짜, 종류(유산소/근력), 이름, 시간·거리 또는 세트·횟수·무게, 소모 칼로리 (수치만 수정 가능, 종류·날짜 고정) | 본인만 |
 | `users/{uid}/meals/{날짜_끼니}` | 날짜, 끼니, 음식, 칼로리, 단백질 (간식은 자동ID) | 본인만 |
 | `users/{uid}/plans/{자동ID}` | 날짜, 제목, 상태(planned → done → archived) | 본인만 |
 
@@ -77,7 +77,7 @@ Nginx 설정은 `deploy/nginx-fitlog.conf`를 사용합니다. 화면 경로를 
 src/
 ├─ domain/   계산·서비스 규칙 (Firebase를 모름)
 ├─ data/     저장소·변환·로그인 상태 (Firebase를 아는 유일한 곳)
-├─ lib/      Subject·Singleton·날짜·입력 검사 도구
+├─ lib/      Subject·날짜·입력 검사·시간 제한 도구
 ├─ hooks/    저장소 구독(useRecords), 저장 요청 공통 처리(useActionRunner)
 ├─ components/  Profile·Summary·Workout·Plan·Meal 패널
 └─ pages/HomePage.jsx  화면 조립
@@ -88,7 +88,7 @@ src/
 | # | 패턴 | 위치 | 하는 일 |
 |---|------|------|---------|
 | 1 | Strategy | `domain/burnStrategies.js` (CardioBurnStrategy·StrengthBurnStrategy), `domain/goalStrategies.js` (Lose·Maintain·GainStrategy) | 운동 종류별 소모 칼로리 계산, 목표별 권장값과 달성 판단 |
-| 2 | Factory | `domain/workoutFactory.js` `createWorkout` | 화면 입력 → 종류에 맞게 검사·계산된 운동 기록 생성 |
+| 2 | Factory Method | `domain/workoutFactory.js` (WorkoutCreator → Cardio·StrengthWorkoutCreator, 제품 Cardio·StrengthWorkout) | 운동 종류별 제작자가 검사·제품 생성, 추가·수정 모두 사용 |
 | 3 | State | `domain/planState.js` (Planned·Done·ArchivedState) | 계획 예정 → 완료 → 보관, 상태별 허용 동작 |
 | 4 | Chain of Responsibility | `domain/mealValidation.js` (MealHandler 하위 처리자 5개) | 식단 입력 단계별 검사(끼니·음식·칼로리·단백질·중복) |
 | 5 | Facade | `domain/DailySummaryService.js` | 오늘의 요약·최근 7일 통계 계산 창구 |
@@ -96,7 +96,7 @@ src/
 | 7 | Repository | `data/firestoreRepository.js`, `data/memoryRepository.js` | Firestore/메모리 저장소를 같은 인터페이스로 |
 | 8 | Adapter | `data/adapters.js` | Firebase User·Snapshot·Timestamp → 앱 객체 |
 | 9 | Observer | `lib/Subject.js`, `data/authStore.js` → `useAuth.js` | 로그인 상태·데이터 변경 알림 |
-| 10 | Singleton | `lib/singleton.js`, `firebase.js` `getFirebase` | Firebase 연결 하나만 생성 |
+| 10 | Singleton | `firebase.js` `FirebaseClient.getInstance()` (비공개 정적 필드, 생성 제한) | Firebase 연결 하나만 생성 |
 
 패턴 적용 전(모든 기능을 `HomePage.jsx` 하나에 둔 버전)은 커밋 "feat: 프로필·운동·계획·식단·요약 기능 (변경 전: 단일 컴포넌트 버전)"에 남겨 두었습니다.
 
@@ -115,7 +115,7 @@ src/
 | 저장 지연 (10초 초과) | 기다리기를 멈추고 안내, 버튼 다시 사용 가능 | `lib/withTimeout.js` |
 | 연속 클릭 | 첫 요청이 끝날 때까지 무시 | `useActionRunner.js` (pending ref) |
 | 미래·잘못된 날짜 | 날짜 이동을 막고 안내 | `lib/dates.js` `checkRecordDate` |
-| 실수로 삭제 | 실행 취소 버튼 (보관한 계획은 확인창) | `domain/commands.js` |
+| 실수로 삭제 | 실행 취소 버튼 (보관한 계획은 확인창), 되살리기가 거절되면 이유 안내 | `domain/commands.js` |
 | 화면 오류 | 흰 화면 대신 새로고침 안내 | `components/ErrorBoundary.jsx` |
 | Firebase 설정 누락 | "Firebase 연결 준비" 안내, 빌드 중단 | `App.jsx`, `scripts/check-env.mjs` |
 

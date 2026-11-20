@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { createWorkout, describeWorkout } from './workoutFactory.js';
+import {
+  CardioWorkout, CardioWorkoutCreator, StrengthWorkout, StrengthWorkoutCreator, Workout, WorkoutCreator,
+  createWorkout, creatorFor, describeWorkout, workoutFromRecord,
+} from './workoutFactory.js';
 
 const date = '2026-11-13';
 
@@ -33,5 +36,32 @@ describe('Factory: 운동 기록 생성', () => {
   it('기록 설명 문장을 만든다', () => {
     expect(describeWorkout({ type: 'cardio', durationMin: 30, distanceKm: 5 })).toBe('30분 · 5km');
     expect(describeWorkout({ type: 'strength', sets: 3, reps: 10, weightKg: 40 })).toBe('3세트 × 10회 · 40kg');
+  });
+});
+
+describe('Factory Method: 제작자와 제품', () => {
+  it('종류마다 다른 제작자(ConcreteCreator)가 선택된다', () => {
+    expect(creatorFor('cardio')).toBeInstanceOf(CardioWorkoutCreator);
+    expect(creatorFor('strength')).toBeInstanceOf(StrengthWorkoutCreator);
+    expect(creatorFor('yoga')).toBeNull();
+  });
+  it('제작자는 종류에 맞는 제품(Workout 하위 클래스)을 만든다', () => {
+    const { workout } = createWorkout({ type: 'strength', name: '벤치', sets: '3', reps: '10', weightKg: '40' }, { date, bodyWeightKg: 60 });
+    expect(workout).toBeInstanceOf(StrengthWorkout);
+    expect(workout).toBeInstanceOf(Workout);
+    expect(workout.kcal).toBe(30);
+  });
+  it('저장된 기록을 제품으로 되살리면 종류별 describe()가 다르게 동작한다 (다형성)', () => {
+    expect(workoutFromRecord({ type: 'cardio', name: '걷기', durationMin: 20 })).toBeInstanceOf(CardioWorkout);
+    expect(['cardio', 'strength'].map((type) => workoutFromRecord({ type, durationMin: 20, sets: 2, reps: 5, weightKg: 10 }).describe()))
+      .toEqual(['20분', '2세트 × 5회 · 10kg']);
+  });
+  it('공통 제작자의 팩토리 메서드는 직접 쓸 수 없다', () => {
+    expect(() => new WorkoutCreator().create({ name: '걷기' })).toThrow('구현해야');
+  });
+  it('수정할 때도 같은 제작자가 칼로리를 다시 계산한다', () => {
+    const before = createWorkout({ type: 'cardio', name: '달리기', durationMin: '30' }, { date, bodyWeightKg: 70 }).record;
+    const after = createWorkout({ type: 'cardio', name: '달리기', durationMin: '60' }, { date, bodyWeightKg: 70 }).record;
+    expect([before.kcal, after.kcal]).toEqual([343, 686]);
   });
 });

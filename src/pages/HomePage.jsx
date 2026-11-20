@@ -79,6 +79,19 @@ export default function HomePage({ user, repositories }) {
     return run(() => repos.workouts.add(record), `${record.name} 기록을 저장했습니다. (${record.kcal}kcal)`);
   }
 
+  function editWorkout(workout, input) {
+    // 종류·이름·날짜는 그대로 두고 수치만 바꾼다. 칼로리는 Factory가 다시 계산한다.
+    const { record, error } = createWorkout(
+      { ...input, type: workout.type, name: workout.name },
+      { date: workout.date, bodyWeightKg: profile?.weightKg },
+    );
+    if (error) return fail(error);
+    // eslint-disable-next-line no-unused-vars
+    const { type, name, date: recordDate, ...patch } = record;
+    if (workout.type === 'cardio' && !('distanceKm' in patch)) patch.distanceKm = undefined; // 거리를 비우면 삭제
+    return run(() => repos.workouts.update(workout.id, patch), `${workout.name} 기록을 수정했습니다. (${record.kcal}kcal)`);
+  }
+
   // ── 식단 (Chain of Responsibility) ──
   function addMeal(input) {
     const { record, error } = validateMeal(input, { date, existingMeals: meals.items, forCreate: true });
@@ -136,11 +149,17 @@ export default function HomePage({ user, repositories }) {
   }
 
   async function undo() {
-    const ok = await run(async () => {
-      const command = await history.current.undo();
-      if (command) setUndoLabel(history.current.peek()?.label ?? '');
+    if (!history.current.canUndo()) return fail('되돌릴 삭제 기록이 없습니다.');
+    return run(async () => {
+      try {
+        await history.current.undo();
+      } catch (error) {
+        // 같은 날 같은 끼니를 다시 기록한 뒤 되살리려는 경우 등: Rules가 거절한다
+        if (error?.code === 'permission-denied') throw Object.assign(new Error('undo conflict'), { code: 'fitlog/undo-conflict' });
+        throw error;
+      }
+      setUndoLabel(history.current.peek()?.label ?? '');
     }, '삭제를 되돌렸습니다.');
-    return ok;
   }
 
   async function logout() {
@@ -215,7 +234,7 @@ export default function HomePage({ user, repositories }) {
             )}
             {tab === 'workouts' && (
               <WorkoutPanel dayLabel={dayLabel} items={workouts.items} loading={workouts.loading} busy={busy} feedback={feedback}
-                onAdd={addWorkout} onDelete={(w) => deleteRecord(repos.workouts, w, w.name)} />
+                onAdd={addWorkout} onEdit={editWorkout} onDelete={(w) => deleteRecord(repos.workouts, w, w.name)} />
             )}
             {tab === 'plans' && (
               <PlanPanel dayLabel={dayLabel} items={plans.items} loading={plans.loading} busy={busy} feedback={feedback}

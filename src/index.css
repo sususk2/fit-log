@@ -183,3 +183,5 @@ select:focus-visible { outline: 3px solid #86efac; outline-offset: 2px; }
   .week-bars li { grid-template-columns: 64px 1fr 18px; }
   .week-value { grid-column: 2 / 3; grid-row: 2; font-size: 12px; }
 }
+
+.edit-name { align-self: center; margin-right: 4px; }

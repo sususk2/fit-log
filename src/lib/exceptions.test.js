@@ -43,3 +43,9 @@ describe('예외 처리: 기록 날짜 검사', () => {
     expect(checkRecordDate('2026-02-30', today)).toMatch('존재하지 않는');
   });
 });
+
+describe('예외 처리: 실행 취소 충돌', () => {
+  it('되살리기가 거절되면 이유를 안내한다', () => {
+    expect(errorMessage({ code: 'fitlog/undo-conflict' })).toMatch('되돌리지 못했습니다');
+  });
+});

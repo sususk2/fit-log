@@ -9,12 +9,12 @@
 //   watchRecentDates(onData, onError) → 해제 함수    // 연속 기록일 계산용 최근 날짜 목록
 //   add(fields) → id          // 자동 ID
 //   put(id, fields) → id      // 정해진 ID로 새로 만들기 (끼니 문서)
-//   update(id, patch)
+//   update(id, patch)        // 값이 undefined인 필드는 문서에서 지운다
 //   remove(id)
 //   restore(item)             // 삭제 실행 취소: 같은 ID로 다시 만든다
 import {
   collection, deleteDoc, doc, getDoc, limit, onSnapshot, orderBy, query,
-  serverTimestamp, setDoc, updateDoc, where, addDoc,
+  serverTimestamp, setDoc, updateDoc, where, addDoc, deleteField,
 } from 'firebase/firestore';
 import { fromSnapshot, toStoredFields } from './adapters.js';
 
@@ -60,7 +60,10 @@ export class FirestoreRecordRepository {
   }
 
   async update(id, patch) {
-    await updateDoc(this.docRef(id), patch);
+    // Firestore는 undefined를 저장할 수 없으므로 "필드 삭제"로 바꿔 보낸다 (예: 거리 입력을 비운 경우)
+    const fields = Object.fromEntries(Object.entries(patch)
+      .map(([key, value]) => [key, value === undefined ? deleteField() : value]));
+    await updateDoc(this.docRef(id), fields);
   }
 
   async remove(id) {

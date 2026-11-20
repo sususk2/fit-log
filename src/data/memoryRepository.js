@@ -75,7 +75,9 @@ export class MemoryRecordRepository {
     this.checkFailure();
     const current = this.items.get(id);
     if (!current) throw storeError('not-found');
-    this.items.set(id, { ...current, ...patch });
+    const next = { ...current, ...patch };
+    Object.keys(patch).forEach((key) => { if (patch[key] === undefined) delete next[key]; });
+    this.items.set(id, next);
     this.subject.notify();
   }
 
