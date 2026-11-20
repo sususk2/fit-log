@@ -41,7 +41,7 @@ jobs:
       - name: Install
         run: |
           npm install
-          npm install --no-save --legacy-peer-deps @firebase/rules-unit-testing firebase-tools
+          npm install --no-save --legacy-peer-deps @firebase/rules-unit-testing@6.0.0 firebase-tools@15.37.0
       - name: Show rules test tool versions
         run: npm ls @firebase/rules-unit-testing firebase-tools --depth=0 || true    
       - name: Rules test (emulator)
